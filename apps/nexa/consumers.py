@@ -20,13 +20,12 @@ class TranscribeConsumer(AsyncWebsocketConsumer):
         print(f"WS disconnected: {close_code}")
 
     async def receive(self, text_data=None, bytes_data=None):
-        # Получаем аудио-чанк
         if bytes_data:
             self.audio_chunks.append(bytes_data)
             total_size = sum(len(c) for c in self.audio_chunks)
 
             # Каждые ~200KB (~5-7 секунд) — транскрибируем
-            if total_size >= 200_000:
+            if total_size >= 50_000:
                 await self.flush_and_transcribe()
 
         # Получаем управляющие команды
@@ -45,7 +44,8 @@ class TranscribeConsumer(AsyncWebsocketConsumer):
         """Сохраняем буфер в файл, транскрибируем, возвращаем текст."""
         chunk_data = b"".join(self.audio_chunks)
         self.audio_chunks = []
-
+        tmp_dir = '/var/www/Vantoryx/tmp'
+        os.makedirs(tmp_dir, exist_ok=True)
         with tempfile.NamedTemporaryFile(suffix=".webm", delete=False) as f:
             f.write(chunk_data)
             tmp_path = f.name
