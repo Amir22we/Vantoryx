@@ -26,7 +26,8 @@ def transcribe_with_whisper_local(file_path: str, language: str = "ru", model_na
         language=language,
         fp16=False,
         verbose=False,
-        no_speech_threshold=0.6,
+        no_speech_threshold=0.9,
+        logprob_threshold=-1.0,           
         condition_on_previous_text=False,
     )
 

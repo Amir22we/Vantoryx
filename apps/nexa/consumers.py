@@ -46,7 +46,7 @@ class TranscribeConsumer(AsyncWebsocketConsumer):
         # Собираем все чанки с начала записи — это всегда валидный WebM
         all_data = b"".join(self.audio_chunks)
         self.pending_size = 0
-
+        
         with tempfile.NamedTemporaryFile(suffix=".webm", delete=False) as f:
             f.write(all_data)
             tmp_path = f.name
