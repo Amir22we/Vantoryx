@@ -11,24 +11,26 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-OPENROUTER_API_KEY = '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'
+
+OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-7b8fco4@g+cuh1-(46@65vdpdu%i*3ipr_7&wdb5a7l8z7g9$9'
+SECRET_KEY = os.getenv('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
 ALLOWED_HOSTS = ["*"]
-
-
-
 
 # Application definition
 
@@ -128,11 +130,6 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 #PostgreSQL
-from dotenv import load_dotenv
-import os
-
-load_dotenv()
-
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
