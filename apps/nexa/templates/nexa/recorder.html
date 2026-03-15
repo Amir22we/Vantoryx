@@ -41,7 +41,8 @@
       document.getElementById('transcript').textContent = '';
 
       // Открываем WebSocket
-      ws = new WebSocket(`ws://${location.host}/ws/transcribe/`);
+      const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+      ws = new WebSocket(`${proto}://${location.host}/ws/transcribe/`);
 
       ws.onmessage = (event) => {
         const data = JSON.parse(event.data);
