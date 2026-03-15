@@ -46,10 +46,18 @@ class TranscribeConsumer(AsyncWebsocketConsumer):
         # Собираем все чанки с начала записи — это всегда валидный WebM
         all_data = b"".join(self.audio_chunks)
         self.pending_size = 0
-        
-        with tempfile.NamedTemporaryFile(suffix=".webm", delete=False) as f:
+        import uuid
+        from django.conf import settings
+        tmp_dir = settings.BASE_DIR / "tmp"
+        tmp_dir.mkdir(exist_ok=True)
+        tmp_path = str(tmp_dir / f"{uuid.uuid4()}.webm")
+
+        with open(tmp_path, "wb") as f:
             f.write(all_data)
             tmp_path = f.name
+            print(f"Temp file path: {tmp_path}")
+            print(f"File exists: {os.path.exists(tmp_path)}")
+            print(f"File size: {os.path.getsize(tmp_path) if os.path.exists(tmp_path) else 'N/A'}")
         try:
             loop = asyncio.get_running_loop()
             text = await loop.run_in_executor(
