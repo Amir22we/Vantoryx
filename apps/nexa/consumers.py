@@ -12,9 +12,9 @@ from .transcribe import transcribe_with_whisper_local
 class TranscribeConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         await self.accept()
-        self.audio_chunks = []
-        self.webm_header = None  # заголовок WebM из первого чанка
+        self.audio_chunks = []       # все чанки с начала записи
         self.full_transcript = ""
+        self.pending_size = 0        # размер ещё не обработанных данных
         print("WS connected")
 
     async def disconnect(self, close_code):
@@ -22,15 +22,11 @@ class TranscribeConsumer(AsyncWebsocketConsumer):
 
     async def receive(self, text_data=None, bytes_data=None):
         if bytes_data:
-            # Сохраняем WebM-заголовок из первого чанка
-            if self.webm_header is None:
-                self.webm_header = bytes_data
-
             self.audio_chunks.append(bytes_data)
-            total_size = sum(len(c) for c in self.audio_chunks)
+            self.pending_size += len(bytes_data)
 
-            # Каждые ~50KB — транскрибируем
-            if total_size >= 50_000:
+            # Каждые ~50KB необработанных данных — транскрибируем
+            if self.pending_size >= 50_000:
                 await self.flush_and_transcribe()
 
         # Получаем управляющие команды
@@ -39,23 +35,20 @@ class TranscribeConsumer(AsyncWebsocketConsumer):
 
             if data.get("type") == "stop":
                 # Финальный чанк
-                if self.audio_chunks:
+                if self.pending_size > 0:
                     await self.flush_and_transcribe()
 
                 # Отправляем весь текст на классификацию
                 await self.classify()
 
     async def flush_and_transcribe(self):
-        """Сохраняем буфер в файл, транскрибируем, возвращаем текст."""
-        chunk_data = b"".join(self.audio_chunks)
-        self.audio_chunks = []
-
-        # Если это не первый чанк, приклеиваем WebM-заголовок
-        if self.webm_header and not chunk_data.startswith(self.webm_header):
-            chunk_data = self.webm_header + chunk_data
+        """Записываем ВСЕ чанки в файл (валидный WebM), транскрибируем целиком."""
+        # Собираем все чанки с начала записи — это всегда валидный WebM
+        all_data = b"".join(self.audio_chunks)
+        self.pending_size = 0
 
         with tempfile.NamedTemporaryFile(suffix=".webm", delete=False) as f:
-            f.write(chunk_data)
+            f.write(all_data)
             tmp_path = f.name
         try:
             loop = asyncio.get_running_loop()
@@ -66,7 +59,7 @@ class TranscribeConsumer(AsyncWebsocketConsumer):
             )
 
             if text:
-                self.full_transcript += " " + text
+                self.full_transcript = text
                 await self.send(json.dumps({
                     "type": "partial",
                     "text": text.strip(),

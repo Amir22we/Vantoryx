@@ -26,8 +26,8 @@ def transcribe_with_whisper_local(file_path: str, language: str = "ru", model_na
         language=language,
         fp16=False,
         verbose=False,
-        # temperature=0.0,
-        # condition_on_previous_text=False,
+        no_speech_threshold=0.6,
+        condition_on_previous_text=False,
     )
 
     text = (result.get("text") or "").strip()
