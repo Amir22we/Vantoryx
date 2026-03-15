@@ -62,7 +62,7 @@ class TranscribeConsumer(AsyncWebsocketConsumer):
             text = await loop.run_in_executor(
                 None,
                 transcribe_with_whisper_local,
-                tmp_path, "ru", "small"
+                tmp_path, "ru", "large-v3"
             )
 
             if text:
