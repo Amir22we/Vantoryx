@@ -5,7 +5,8 @@ import os
 from channels.generic.websocket import AsyncWebsocketConsumer
 from openai import OpenAI
 from django.conf import settings
-
+import uuid
+from django.conf import settings
 from .transcribe import transcribe_with_whisper_local
 
 
@@ -46,8 +47,6 @@ class TranscribeConsumer(AsyncWebsocketConsumer):
         # Собираем все чанки с начала записи — это всегда валидный WebM
         all_data = b"".join(self.audio_chunks)
         self.pending_size = 0
-        import uuid
-        from django.conf import settings
         tmp_dir = settings.BASE_DIR / "tmp"
         tmp_dir.mkdir(exist_ok=True)
         tmp_path = str(tmp_dir / f"{uuid.uuid4()}.webm")
@@ -63,7 +62,7 @@ class TranscribeConsumer(AsyncWebsocketConsumer):
             text = await loop.run_in_executor(
                 None,
                 transcribe_with_whisper_local,
-                tmp_path, "ru", "turbo"
+                tmp_path, "ru", "small"
             )
 
             if text:
