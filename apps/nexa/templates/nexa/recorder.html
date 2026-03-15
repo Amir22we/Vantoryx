@@ -35,6 +35,7 @@
 
   <script>
     let ws, mediaRecorder, stream;
+    let lastChunkSent = Promise.resolve(); // промис отправки последнего чанка
 
     async function startRecording() {
       document.getElementById('verdict').style.display = 'none';
@@ -73,11 +74,21 @@
         });
 
         // Отправляем чанки каждые 5 секунд
-        mediaRecorder.ondataavailable = async (e) => {
+        mediaRecorder.ondataavailable = (e) => {
           if (e.data.size > 0 && ws.readyState === WebSocket.OPEN) {
-            const buffer = await e.data.arrayBuffer();
-            ws.send(buffer);
+            lastChunkSent = e.data.arrayBuffer().then(buffer => {
+              ws.send(buffer);
+            });
           }
+        };
+
+        // Отправляем stop ПОСЛЕ гарантированной отправки последнего чанка
+        mediaRecorder.onstop = () => {
+          lastChunkSent.then(() => {
+            if (ws?.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({ type: 'stop' }));
+            }
+          });
         };
 
         mediaRecorder.start(5000); // чанк каждые 5 сек
@@ -91,10 +102,6 @@
     function stopRecording() {
       mediaRecorder?.stop();
       stream?.getTracks().forEach(t => t.stop());
-
-      if (ws?.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: 'stop' }));
-      }
 
       document.getElementById('startBtn').style.display = 'inline-block';
       document.getElementById('stopBtn').style.display = 'none';
