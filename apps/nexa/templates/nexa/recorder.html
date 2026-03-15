@@ -48,7 +48,9 @@
       ws.onmessage = (event) => {
         const data = JSON.parse(event.data);
 
+        // Было
         if (data.type === 'partial') {
+    // Заменяем весь блок текстом от Whisper (он уже накопленный)
           document.getElementById('transcript').textContent = data.full;
           document.getElementById('status').innerHTML = '<span class="dot"></span>Идёт запись и транскрипция...';
         }

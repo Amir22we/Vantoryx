@@ -63,7 +63,7 @@ class TranscribeConsumer(AsyncWebsocketConsumer):
             )
 
             if text:
-                self.full_transcript = text
+                self.full_transcript = text  # Whisper даёт полный текст — это правильно
                 await self.send(json.dumps({
                     "type": "partial",
                     "text": text.strip(),
