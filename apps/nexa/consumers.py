@@ -46,10 +46,9 @@ class TranscribeConsumer(AsyncWebsocketConsumer):
         self.audio_chunks = []
         tmp_dir = '/var/www/Vantoryx/tmp'
         os.makedirs(tmp_dir, exist_ok=True)
-        with tempfile.NamedTemporaryFile(suffix=".webm", delete=False) as f:
+        with tempfile.NamedTemporaryFile(suffix=".webm", delete=False, dir=tmp_dir) as f:  # ← добавить dir=tmp_dir
             f.write(chunk_data)
             tmp_path = f.name
-
         try:
             loop = asyncio.get_event_loop()
             text = await loop.run_in_executor(
