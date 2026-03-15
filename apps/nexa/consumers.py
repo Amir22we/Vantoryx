@@ -2,10 +2,9 @@ import json
 import asyncio
 import tempfile
 import os
+import uuid
 from channels.generic.websocket import AsyncWebsocketConsumer
 from openai import OpenAI
-from django.conf import settings
-import uuid
 from django.conf import settings
 from .transcribe import transcribe_with_whisper_local
 
@@ -13,9 +12,10 @@ from .transcribe import transcribe_with_whisper_local
 class TranscribeConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         await self.accept()
-        self.audio_chunks = []       # все чанки с начала записи
+        self.audio_chunks = []
         self.full_transcript = ""
-        self.pending_size = 0        # размер ещё не обработанных данных
+        self.processing = False
+        self.pending_size = 0
         print("WS connected")
 
     async def disconnect(self, close_code):
@@ -26,37 +26,34 @@ class TranscribeConsumer(AsyncWebsocketConsumer):
             self.audio_chunks.append(bytes_data)
             self.pending_size += len(bytes_data)
 
-            # Каждые ~50KB необработанных данных — транскрибируем
-            if self.pending_size >= 5_000:
-                await self.flush_and_transcribe()
+            # Запускаем транскрипцию в фоне не блокируя получение новых чанков
+            if self.pending_size >= 8_000 and not self.processing:
+                asyncio.create_task(self.flush_and_transcribe())
 
-        # Получаем управляющие команды
         elif text_data:
             data = json.loads(text_data)
-
             if data.get("type") == "stop":
-                # Финальный чанк
-                if self.pending_size > 0:
-                    await self.flush_and_transcribe()
-
-                # Отправляем весь текст на классификацию
+                # Ждём текущую обработку и делаем финальную
+                while self.processing:
+                    await asyncio.sleep(0.1)
+                await self.flush_and_transcribe()
                 await self.classify()
 
     async def flush_and_transcribe(self):
-        """Записываем ВСЕ чанки в файл (валидный WebM), транскрибируем целиком."""
-        # Собираем все чанки с начала записи — это всегда валидный WebM
-        all_data = b"".join(self.audio_chunks)
+        if self.processing:
+            return
+        self.processing = True
         self.pending_size = 0
+
+        all_data = b"".join(self.audio_chunks)
+
         tmp_dir = settings.BASE_DIR / "tmp"
         tmp_dir.mkdir(exist_ok=True)
         tmp_path = str(tmp_dir / f"{uuid.uuid4()}.webm")
 
         with open(tmp_path, "wb") as f:
             f.write(all_data)
-            tmp_path = f.name
-            print(f"Temp file path: {tmp_path}")
-            print(f"File exists: {os.path.exists(tmp_path)}")
-            print(f"File size: {os.path.getsize(tmp_path) if os.path.exists(tmp_path) else 'N/A'}")
+
         try:
             loop = asyncio.get_running_loop()
             text = await loop.run_in_executor(
@@ -75,10 +72,11 @@ class TranscribeConsumer(AsyncWebsocketConsumer):
         except Exception as e:
             print("Transcribe error:", repr(e))
         finally:
-            os.unlink(tmp_path)
+            self.processing = False
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
 
     async def classify(self):
-        """Отправляем итоговый текст в GPT для классификации."""
         transcript = self.full_transcript.strip()
         if not transcript:
             await self.send(json.dumps({
