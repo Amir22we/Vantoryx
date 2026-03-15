@@ -27,7 +27,7 @@ class TranscribeConsumer(AsyncWebsocketConsumer):
             self.pending_size += len(bytes_data)
 
             # Каждые ~50KB необработанных данных — транскрибируем
-            if self.pending_size >= 50_000:
+            if self.pending_size >= 5_000:
                 await self.flush_and_transcribe()
 
         # Получаем управляющие команды
@@ -62,7 +62,7 @@ class TranscribeConsumer(AsyncWebsocketConsumer):
             text = await loop.run_in_executor(
                 None,
                 transcribe_with_whisper_local,
-                tmp_path, "ru", "large-v3"
+                tmp_path, "ru", "turbo"
             )
 
             if text:
