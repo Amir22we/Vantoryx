@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation } from "react-router-dom";
 import {
   IconChart,
   IconClose,
+  IconGraduate,
   IconHistory,
   IconHome,
   IconInfo,
@@ -31,6 +32,7 @@ const allNav = [
   { to: "/audio", label: "Аудио", icon: <IconMic /> },
   { to: "/history", label: "История", icon: <IconHistory /> },
   { to: "/analytics", label: "Аналитика", icon: <IconChart /> },
+  { to: "/learn", label: "Обучение", icon: <IconGraduate /> },
   { to: "/help", label: "Справка", icon: <IconInfo /> },
   { to: "/about", label: "О приложении", icon: <IconPerson /> },
   // {
