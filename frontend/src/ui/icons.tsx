@@ -322,6 +322,31 @@ export function IconApple() {
   );
 }
 
+export function IconSearch() {
+  return (
+    <I>
+      <svg viewBox="0 0 24 24" fill="none">
+        <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" />
+        <path d="M16.5 16.5L21 21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      </svg>
+    </I>
+  );
+}
+
+export function IconChart() {
+  return (
+    <I>
+      <svg viewBox="0 0 24 24" fill="none">
+        <path d="M4 20h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        <path d="M4 16V10" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+        <path d="M9 16V6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+        <path d="M14 16V12" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+        <path d="M19 16V8" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+      </svg>
+    </I>
+  );
+}
+
 // Large version for splash screen (no wrapper span)
 export function IconShieldLarge() {
   return (

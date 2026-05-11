@@ -237,6 +237,66 @@ body {
   letter-spacing: 0.01em;
 }
 
+/* ─── Nav Search ────────────────────────────────────────── */
+.nav-search {
+  margin: 0 10px 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border2);
+  background: var(--surface2);
+  transition: border-color var(--dur-fast), box-shadow var(--dur-fast), background var(--dur-fast);
+}
+.nav-search:focus-within {
+  border-color: var(--accent2);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.14);
+  background: var(--surface);
+}
+.nav-search .icon {
+  color: var(--muted-soft);
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  transition: color var(--dur-fast);
+}
+.nav-search:focus-within .icon {
+  color: var(--accent2);
+}
+.nav-search__input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13.5px;
+  outline: none;
+  min-width: 0;
+}
+.nav-search__input::placeholder {
+  color: var(--muted-soft);
+}
+.nav-search__input::-webkit-search-cancel-button {
+  display: none;
+}
+.nav-search__clear {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  color: var(--muted);
+}
+.nav-search__clear .icon {
+  width: 14px;
+  height: 14px;
+}
+.nav-search__empty {
+  padding: 20px 12px;
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+}
+
 /* ─── Backdrop ──────────────────────────────────────────── */
 .nav-backdrop {
   position: fixed;
@@ -1265,6 +1325,19 @@ body {
   font-size: 11px;
 }
 
+/* ─── Analytics page ────────────────────────────────────── */
+.analytics-toolbar {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.analytics-chart {
+  margin: 0 -4px;
+}
+
 /* ─── PWA Install Banner ─────────────────────────────────── */
 .pwa-banner {
   position: fixed;
@@ -1639,6 +1712,14 @@ body {
 }
 [data-theme="dark"] .nav-backdrop {
   background: rgba(0, 0, 0, 0.6);
+}
+[data-theme="dark"] .nav-search {
+  background: var(--surface2);
+  border-color: var(--border2);
+}
+[data-theme="dark"] .nav-search:focus-within {
+  box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.2);
+  background: var(--surface3);
 }
 
 [data-theme="dark"] .history-entry {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { api, type HumanRewriteResponse } from "../../lib/api";
 import { usePageMeta } from "../../lib/meta";
 import {
@@ -10,14 +10,142 @@ import { IconWand } from "../../ui/icons";
 type Busy<T> = { status: "idle" } | { status: "loading" } | { status: "ok"; data: T } | { status: "error"; error: string };
 const toErr = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
+// ── word-level diff ──────────────────────────────────────────
 
-function RewriteResult({ data }: { data: HumanRewriteResponse }) {
+type DiffToken = { type: "equal" | "remove" | "add"; text: string };
+
+const MAX_TOKENS = 600;
+
+function tokenize(text: string): string[] {
+  return text.trim().split(/\s+/).filter(Boolean);
+}
+
+function buildLCS(a: string[], b: string[]): number[][] {
+  const m = a.length, n = b.length;
+  const dp: number[][] = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+  for (let i = 1; i <= m; i++)
+    for (let j = 1; j <= n; j++)
+      dp[i][j] = a[i - 1] === b[j - 1] ? dp[i - 1][j - 1] + 1 : Math.max(dp[i - 1][j], dp[i][j - 1]);
+  return dp;
+}
+
+function computeDiff(original: string, rewritten: string): { left: DiffToken[]; right: DiffToken[] } | null {
+  const a = tokenize(original);
+  const b = tokenize(rewritten);
+  if (a.length > MAX_TOKENS || b.length > MAX_TOKENS) return null;
+
+  const dp = buildLCS(a, b);
+  const ops: Array<["equal" | "remove" | "add", string]> = [];
+  let i = a.length, j = b.length;
+
+  while (i > 0 || j > 0) {
+    if (i > 0 && j > 0 && a[i - 1] === b[j - 1]) {
+      ops.push(["equal", a[i - 1]]); i--; j--;
+    } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
+      ops.push(["add", b[j - 1]]); j--;
+    } else {
+      ops.push(["remove", a[i - 1]]); i--;
+    }
+  }
+  ops.reverse();
+
+  const left: DiffToken[] = [];
+  const right: DiffToken[] = [];
+  for (const [type, text] of ops) {
+    if (type === "equal") { left.push({ type: "equal", text }); right.push({ type: "equal", text }); }
+    else if (type === "remove") left.push({ type: "remove", text });
+    else right.push({ type: "add", text });
+  }
+  return { left, right };
+}
+
+// ── DiffPanel ────────────────────────────────────────────────
+
+function DiffPanel({ label, tokens, side }: {
+  label: string;
+  tokens: DiffToken[];
+  side: "left" | "right";
+}) {
+  return (
+    <div className={`diff-panel diff-panel--${side}`}>
+      <div className="diff-panel__label">{label}</div>
+      <div className="diff-panel__text">
+        {tokens.map((t, i) => {
+          const space = i > 0 ? " " : "";
+          if (t.type === "equal") return <span key={i}>{space}{t.text}</span>;
+          return (
+            <mark key={i} className={`diff-token diff-token--${t.type}`}>
+              {space}{t.text}
+            </mark>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function DiffView({ original, rewritten }: { original: string; rewritten: string }) {
+  const result = useMemo(() => computeDiff(original, rewritten), [original, rewritten]);
+
+  if (!result) {
+    return (
+      <Pill tone="warn">Текст слишком длинный для посимвольного сравнения</Pill>
+    );
+  }
+
+  const removedCount = result.left.filter((t) => t.type === "remove").length;
+  const addedCount = result.right.filter((t) => t.type === "add").length;
+
+  return (
+    <div className="diff-view">
+      <div className="diff-legend">
+        {removedCount > 0 && <span className="diff-legend__item diff-legend__item--remove">−{removedCount} убрано</span>}
+        {addedCount > 0 && <span className="diff-legend__item diff-legend__item--add">+{addedCount} добавлено</span>}
+      </div>
+      <div className="diff-panels">
+        <DiffPanel label="Оригинал" tokens={result.left} side="left" />
+        <DiffPanel label="Честная версия" tokens={result.right} side="right" />
+      </div>
+    </div>
+  );
+}
+
+// ── RewriteResult ────────────────────────────────────────────
+
+function RewriteResult({ input, data }: { input: string; data: HumanRewriteResponse }) {
+  const [view, setView] = useState<"result" | "diff">("diff");
+
   return (
     <div className="result-view">
-      {data.honest_version && (
-        <MessageBox label="Честная версия (что на самом деле написано)">
-          {data.honest_version}
-        </MessageBox>
+      <div className="rewrite-tabs">
+        <button
+          type="button"
+          className={`chip${view === "diff" ? " chip--active" : ""}`}
+          onClick={() => setView("diff")}
+        >
+          Сравнение
+        </button>
+        <button
+          type="button"
+          className={`chip${view === "result" ? " chip--active" : ""}`}
+          onClick={() => setView("result")}
+        >
+          Результат
+        </button>
+      </div>
+
+      {view === "diff" && data.honest_version && (
+        <DiffView original={input} rewritten={data.honest_version} />
+      )}
+
+      {view === "result" && (
+        <>
+          {data.honest_version && (
+            <MessageBox label="Честная версия (что на самом деле написано)">
+              {data.honest_version}
+            </MessageBox>
+          )}
+        </>
       )}
 
       {data.red_flags.length > 0 && (
@@ -78,7 +206,7 @@ export function RewritePage() {
           {res.status === "error" ? <Pill tone="danger">{res.error}</Pill> : null}
         </Row>
 
-        {res.status === "ok" ? <RewriteResult data={res.data} /> : null}
+        {res.status === "ok" ? <RewriteResult input={input} data={res.data} /> : null}
       </Card>
     </Grid>
   );

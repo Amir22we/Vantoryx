@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import {
+  IconChart,
   IconClose,
   IconHistory,
   IconHome,
@@ -11,6 +12,7 @@ import {
   IconMic,
   IconPerson,
   IconPulse,
+  IconSearch,
   // IconSettings,
   IconShield,
   IconTimer,
@@ -28,6 +30,7 @@ const allNav = [
   { to: "/reverse", label: "Обратный фишинг", icon: <IconTimer /> },
   { to: "/audio", label: "Аудио", icon: <IconMic /> },
   { to: "/history", label: "История", icon: <IconHistory /> },
+  { to: "/analytics", label: "Аналитика", icon: <IconChart /> },
   { to: "/help", label: "Справка", icon: <IconInfo /> },
   { to: "/about", label: "О приложении", icon: <IconPerson /> },
   // {
@@ -84,12 +87,22 @@ function PWAInstallBanner() {
 
 export function Layout() {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const searchRef = useRef<HTMLInputElement>(null);
   const location = useLocation();
 
   // Close drawer on route change
   useEffect(() => {
     setDrawerOpen(false);
   }, [location.pathname]);
+
+  useEffect(() => {
+    if (drawerOpen) {
+      setTimeout(() => searchRef.current?.focus(), 80);
+    } else {
+      setSearchQuery("");
+    }
+  }, [drawerOpen]);
 
   // Lock body scroll when drawer open on mobile
   useEffect(() => {
@@ -102,6 +115,11 @@ export function Layout() {
       document.body.style.overflow = "";
     };
   }, [drawerOpen]);
+
+  const q = searchQuery.trim().toLowerCase();
+  const filteredNav = q
+    ? allNav.filter((n) => n.label.toLowerCase().includes(q))
+    : allNav;
 
   const currentPage = allNav.find((n) =>
     n.to === "/"
@@ -130,23 +148,48 @@ export function Layout() {
           </button>
         </div>
 
-        <div className="nav__group">
-          {allNav.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.to === "/"}
-              className={({ isActive }) =>
-                `nav__item${isActive ? " nav__item--active" : ""}`
-              }
+        <div className="nav-search">
+          <IconSearch />
+          <input
+            ref={searchRef}
+            className="nav-search__input"
+            type="search"
+            placeholder="Поиск..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            aria-label="Поиск разделов"
+          />
+          {searchQuery && (
+            <button
+              className="icon-btn nav-search__clear"
+              onClick={() => setSearchQuery("")}
+              aria-label="Очистить поиск"
             >
-              {item.icon}
-              <div className="nav__item-text">
-                <span className="nav__label">{item.label}</span>
-                {/* <span className="nav__desc">{item.desc}</span> */}
-              </div>
-            </NavLink>
-          ))}
+              <IconClose />
+            </button>
+          )}
+        </div>
+
+        <div className="nav__group">
+          {filteredNav.length > 0 ? (
+            filteredNav.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.to === "/"}
+                className={({ isActive }) =>
+                  `nav__item${isActive ? " nav__item--active" : ""}`
+                }
+              >
+                {item.icon}
+                <div className="nav__item-text">
+                  <span className="nav__label">{item.label}</span>
+                </div>
+              </NavLink>
+            ))
+          ) : (
+            <div className="nav-search__empty">Ничего не найдено</div>
+          )}
         </div>
 
         <div className="nav-drawer__footer">

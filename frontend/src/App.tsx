@@ -13,6 +13,7 @@ import { AudioPage } from "./app/pages/audio";
 import { HelpPage } from "./app/pages/help";
 import { AboutPage } from "./app/pages/about";
 import { HistoryPage } from "./app/pages/history";
+import { AnalyticsPage } from "./app/pages/analytics";
 import { SettingsPage } from "./app/pages/settings";
 import { ThemeContext, type Theme } from "./lib/theme";
 import { SplashScreen } from "./ui/components";
@@ -42,6 +43,7 @@ export default function App() {
           <Route path="/reverse" element={<ReversePage />} />
           <Route path="/audio" element={<AudioPage />} />
           <Route path="/history" element={<HistoryPage />} />
+          <Route path="/analytics" element={<AnalyticsPage />} />
           <Route path="/help" element={<HelpPage />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/settings" element={<SettingsPage />} />

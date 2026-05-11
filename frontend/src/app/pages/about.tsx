@@ -348,7 +348,7 @@ export function AboutPage() {
             {
               initial: "A",
               name: "Амир",
-              role: "Главный разработчик",
+              role: "Разработчик",
               tg: "new26qwerty",
             },
             {
@@ -360,7 +360,7 @@ export function AboutPage() {
             {
               initial: "R",
               name: "Рухсора",
-              role: "Технический писатель",
+              role: "Технический писатель. Документация к проекту и API",
               tg: "rukhhsora",
             },
           ].map((m) => (
