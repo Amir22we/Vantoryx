@@ -1325,6 +1325,54 @@ body {
   font-size: 11px;
 }
 
+/* ─── Share button ──────────────────────────────────────── */
+.share-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: var(--r-full);
+  border: 1px solid var(--border2);
+  background: var(--surface);
+  color: var(--text-soft);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--dur-fast), border-color var(--dur-fast), color var(--dur-fast), transform var(--dur-fast);
+  -webkit-tap-highlight-color: transparent;
+  margin-left: auto;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.share-btn:hover {
+  background: var(--accent-container);
+  border-color: rgba(99, 102, 241, 0.28);
+  color: var(--accent);
+}
+.share-btn:active {
+  transform: scale(0.97);
+}
+.share-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.share-btn .icon {
+  width: 15px;
+  height: 15px;
+}
+
+[data-theme="dark"] .share-btn {
+  background: var(--surface2);
+  border-color: var(--border2);
+  color: var(--text-soft);
+}
+[data-theme="dark"] .share-btn:hover {
+  background: var(--accent-container);
+  border-color: rgba(129, 140, 248, 0.3);
+  color: var(--accent2);
+}
+
 /* ─── Rewrite diff view ─────────────────────────────────── */
 .rewrite-tabs {
   display: flex;

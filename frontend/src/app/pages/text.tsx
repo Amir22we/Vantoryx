@@ -1,11 +1,12 @@
 import { useMemo, useState } from "react";
 import { api, type TextScamResponse } from "../../lib/api";
 import { usePageMeta } from "../../lib/meta";
+import { generateShareCard, shareOrDownload } from "../../lib/shareCard";
 import {
   Button, Card, Grid, Pill, ResultList,
   ResultSection, ResultText, RiskBar, Row, TextArea,
 } from "../../ui/components";
-import { IconShield } from "../../ui/icons";
+import { IconShare, IconShield } from "../../ui/icons";
 
 type Busy<T> = { status: "idle" } | { status: "loading" } | { status: "ok"; data: T } | { status: "error"; error: string };
 const toErr = (e: unknown) => (e instanceof Error ? e.message : String(e));
@@ -23,12 +24,47 @@ const VERDICT_TONE: Record<string, "danger" | "safe" | "warn"> = {
 };
 
 function TextResult({ data }: { data: TextScamResponse }) {
+  const [sharing, setSharing] = useState(false);
+  const [shareErr, setShareErr] = useState("");
+
+  async function share() {
+    setSharing(true);
+    setShareErr("");
+    try {
+      const blob = await generateShareCard({
+        verdict: data.verdict,
+        verdictLabel: VERDICT_LABEL[data.verdict] ?? data.verdict,
+        score: data.risk_score,
+        explanation: data.short_explanation,
+        reasons: data.reasons,
+      });
+      await shareOrDownload(blob);
+    } catch (e) {
+      if (e instanceof Error && e.name !== "AbortError") {
+        setShareErr("Не удалось создать карточку");
+      }
+    } finally {
+      setSharing(false);
+    }
+  }
+
   return (
     <div className="result-view">
       <div className="result-verdict-row">
         <Pill tone={VERDICT_TONE[data.verdict] ?? "warn"}>
           {VERDICT_LABEL[data.verdict] ?? data.verdict}
         </Pill>
+        <button
+          type="button"
+          className="share-btn"
+          onClick={share}
+          disabled={sharing}
+          aria-label="Поделиться результатом"
+        >
+          <IconShare />
+          {sharing ? "Генерация…" : "Поделиться"}
+        </button>
+        {shareErr && <Pill tone="danger">{shareErr}</Pill>}
       </div>
 
       <RiskBar score={data.risk_score} />
