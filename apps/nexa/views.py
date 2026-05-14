@@ -735,5 +735,15 @@ def history_list(request):
     return Response(serializer.data)
 
 
+@api_view(["GET"])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def analytics_history(request):
+    # Аналитика по всем пользователям, со всех устройств и за всё время.
+    entries = HistoryEntry.objects.select_related('audio_task').all()
+    serializer = HistoryEntrySerializer(entries, many=True, context={'request': request})
+    return Response(serializer.data)
+
+
 def recorder_view(request):
     return render(request, 'nexa/recorder.html')

@@ -45,6 +45,7 @@ export type HistoryEntry = {
   audio_file: string | null;
   result: Record<string, unknown>;
   created_at: string;
+  device_id: string;
 };
 
 import { getDeviceId } from "./deviceId";
@@ -100,5 +101,6 @@ export const api = {
   },
   getAudioTask: (id: number) => getJson<AudioTask>(`/api/audio-tasks/${id}/`),
   historyList: () => getJson<HistoryEntry[]>("/api/history/"),
+  analyticsList: () => getJson<HistoryEntry[]>("/api/history/all/"),
 };
 

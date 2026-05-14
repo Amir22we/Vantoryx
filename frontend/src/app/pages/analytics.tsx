@@ -43,6 +43,7 @@ function extractFlags(entry: HistoryEntry): string[] {
 type DayChecks = { date: string; count: number };
 type DayVerdicts = { date: string; safe: number; danger: number; warn: number };
 type FlagCount = { flag: string; count: number };
+type DeviceStat = { device: string; count: number };
 
 function buildChecksPerDay(entries: HistoryEntry[]): DayChecks[] {
   const map = new Map<string, number>();
@@ -90,6 +91,27 @@ function buildTopFlags(entries: HistoryEntry[]): FlagCount[] {
     .slice(0, 8);
 }
 
+function buildDeviceStats(entries: HistoryEntry[]): DeviceStat[] {
+  const map = new Map<string, number>();
+  for (const e of entries) {
+    const id = e.device_id?.trim() || "неизвестно";
+    map.set(id, (map.get(id) ?? 0) + 1);
+  }
+  return Array.from(map.entries())
+    .map(([device, count]) => ({
+      device: device === "неизвестно" ? device : "#" + device.slice(0, 8),
+      count,
+    }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 12);
+}
+
+function countDevices(entries: HistoryEntry[]): number {
+  const set = new Set<string>();
+  for (const e of entries) set.add(e.device_id?.trim() || "неизвестно");
+  return set.size;
+}
+
 type LoadState =
   | { status: "idle" }
   | { status: "loading" }
@@ -106,7 +128,7 @@ export function AnalyticsPage() {
   async function load() {
     setState({ status: "loading" });
     try {
-      const raw = await api.historyList();
+      const raw = await api.analyticsList();
       if (!Array.isArray(raw)) {
         setState({ status: "error", error: "Неожиданный ответ сервера" });
         return;
@@ -135,6 +157,8 @@ export function AnalyticsPage() {
   const checksPerDay   = useMemo(() => buildChecksPerDay(entries),   [entries]);
   const verdictsPerDay = useMemo(() => buildVerdictsPerDay(entries), [entries]);
   const topFlags       = useMemo(() => buildTopFlags(entries),       [entries]);
+  const deviceStats    = useMemo(() => buildDeviceStats(entries),    [entries]);
+  const deviceCount    = useMemo(() => countDevices(entries),        [entries]);
 
   const total        = entries.length;
   const withVerdict  = entries.filter((e) => extractVerdict(e));
@@ -156,6 +180,7 @@ export function AnalyticsPage() {
         <div className="analytics-toolbar">
           <Row wrap>
             <Pill tone="neutral">{total} проверок всего</Pill>
+            <Pill tone="neutral">{deviceCount} устройств</Pill>
             {dangerCount > 0 && (
               <Pill tone="danger">
                 {dangerCount} угроз ({Math.round((dangerCount / Math.max(withVerdict.length, 1)) * 100)}%)
@@ -223,6 +248,33 @@ export function AnalyticsPage() {
             <Pill tone="warn">Сомнительно</Pill>
             <Pill tone="danger">Угроза</Pill>
           </Row>
+        </Card>
+      )}
+
+      {deviceStats.length > 0 && (
+        <Card title="Устройства" hint="Сколько проверок с каждого устройства" fullWidth>
+          <div className="analytics-chart">
+            <ResponsiveContainer width="100%" height={Math.max(180, deviceStats.length * 38)}>
+              <BarChart
+                data={deviceStats}
+                layout="vertical"
+                margin={{ top: 4, right: 44, left: 8, bottom: 4 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke={C.grid} horizontal={false} />
+                <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11, fill: C.text }} />
+                <YAxis
+                  type="category"
+                  dataKey="device"
+                  tick={{ fontSize: 11, fill: C.text }}
+                  width={100}
+                />
+                <Tooltip contentStyle={ttStyle} />
+                <Bar dataKey="count" name="Проверок" fill={C.accent} radius={[0, 4, 4, 0]}>
+                  <LabelList dataKey="count" position="right" style={{ fontSize: 11, fill: C.text }} />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </Card>
       )}
 
