@@ -1,9 +1,10 @@
 import { useMemo, useState } from "react";
 import { api, type ReversePhishingResponse } from "../../lib/api";
 import { usePageMeta } from "../../lib/meta";
+import type { ShareData } from "../../lib/shareExport";
 import {
   Button, Card, Grid, MessageBox, Pill, ResultList,
-  ResultSection, Row, TextArea,
+  ResultSection, Row, ShareMenu, TextArea,
 } from "../../ui/components";
 import { IconTimer } from "../../ui/icons";
 
@@ -23,24 +24,46 @@ const CHECK_TONE: Record<string, "safe" | "danger" | "warn"> = {
 };
 
 function ReverseResult({ data }: { data: ReversePhishingResponse }) {
+  const shareData: ShareData = useMemo(() => ({
+    mode: "Обратный фишинг — тянем время",
+    paletteKey: data.self_check_verdict,
+    sections: [
+      ...(data.self_check_verdict
+        ? [{
+            kind: "verdict" as const,
+            verdict: data.self_check_verdict,
+            label: CHECK_LABEL[data.self_check_verdict] ?? data.self_check_verdict,
+          }]
+        : []),
+      ...(data.reply_message
+        ? [{ kind: "quote" as const, title: "Тянущий время ответ", body: data.reply_message }]
+        : []),
+      ...(data.self_check_issues.length > 0
+        ? [{ kind: "list" as const, title: "Замечания самопроверки", items: data.self_check_issues, variant: "negative" as const }]
+        : []),
+    ],
+  }), [data]);
+
   return (
     <div className="result-view">
+      <div className="result-verdict-row">
+        {data.self_check_verdict && (
+          <Pill tone={CHECK_TONE[data.self_check_verdict] ?? "warn"}>
+            {CHECK_LABEL[data.self_check_verdict] ?? data.self_check_verdict}
+          </Pill>
+        )}
+        <ShareMenu data={shareData} baseName="vantoryx-reverse" />
+      </div>
+
       {data.reply_message && (
         <MessageBox label="Тянущий время ответ (скопируйте и отправьте)">
           {data.reply_message}
         </MessageBox>
       )}
 
-      {data.self_check_verdict && (
+      {data.self_check_verdict && data.self_check_issues.length > 0 && (
         <ResultSection title="Самопроверка ответа">
-          <div className="result-verdict-row">
-            <Pill tone={CHECK_TONE[data.self_check_verdict] ?? "warn"}>
-              {CHECK_LABEL[data.self_check_verdict] ?? data.self_check_verdict}
-            </Pill>
-          </div>
-          {data.self_check_issues.length > 0 && (
-            <ResultList items={data.self_check_issues} variant="negative" />
-          )}
+          <ResultList items={data.self_check_issues} variant="negative" />
         </ResultSection>
       )}
     </div>

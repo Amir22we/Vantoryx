@@ -94,14 +94,11 @@ function buildTopFlags(entries: HistoryEntry[]): FlagCount[] {
 function buildDeviceStats(entries: HistoryEntry[]): DeviceStat[] {
   const map = new Map<string, number>();
   for (const e of entries) {
-    const id = e.device_id?.trim() || "неизвестно";
-    map.set(id, (map.get(id) ?? 0) + 1);
+    const type = e.device_type?.trim() || "неизвестно";
+    map.set(type, (map.get(type) ?? 0) + 1);
   }
   return Array.from(map.entries())
-    .map(([device, count]) => ({
-      device: device === "неизвестно" ? device : "#" + device.slice(0, 8),
-      count,
-    }))
+    .map(([device, count]) => ({ device, count }))
     .sort((a, b) => b.count - a.count)
     .slice(0, 12);
 }
@@ -252,7 +249,7 @@ export function AnalyticsPage() {
       )}
 
       {deviceStats.length > 0 && (
-        <Card title="Устройства" hint="Сколько проверок с каждого устройства" fullWidth>
+        <Card title="Устройства" hint="Сколько проверок с каждого типа ОС" fullWidth>
           <div className="analytics-chart">
             <ResponsiveContainer width="100%" height={Math.max(180, deviceStats.length * 38)}>
               <BarChart

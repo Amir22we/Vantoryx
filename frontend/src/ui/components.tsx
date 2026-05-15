@@ -1,6 +1,14 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { cx } from "./ui";
-import { IconInfo, IconShieldLarge } from "./icons";
+import {
+  copyImageToClipboard, exportShare, generateImage,
+  makeVerifyId, nativeShareSupported,
+  type ShareData, type ShareFormat, type ShareLayout,
+} from "../lib/shareExport";
+import {
+  IconCard, IconClose, IconCopy, IconDownload, IconImage,
+  IconInfo, IconPdf, IconPhone, IconShare, IconShieldLarge,
+} from "./icons";
 
 export function AppShell(props: { children: ReactNode }) {
   return <div className="app">{props.children}</div>;
@@ -200,6 +208,267 @@ export function MessageBox(props: { label: string; children: ReactNode }) {
     <div className="message-box">
       <div className="message-box__label">{props.label}</div>
       <div className="message-box__text">{props.children}</div>
+    </div>
+  );
+}
+
+/* ── Share menu + preview modal ────────────────────────── */
+
+export function ShareMenu(props: { data: ShareData; baseName: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button
+        type="button"
+        className={cx("share-btn", open && "share-btn--open")}
+        onClick={() => setOpen(true)}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-label="Поделиться результатом"
+      >
+        <IconShare />
+        Поделиться
+      </button>
+      {open && (
+        <SharePreviewModal
+          data={props.data}
+          baseName={props.baseName}
+          onClose={() => setOpen(false)}
+        />
+      )}
+    </>
+  );
+}
+
+type BusyAction = null | "preview" | "copy" | "png" | "pdf" | "share";
+
+export function SharePreviewModal(props: {
+  data: ShareData;
+  baseName: string;
+  onClose: () => void;
+}) {
+  const [layout, setLayout] = useState<ShareLayout>(props.data.layout ?? "card");
+  const [verifyId] = useState(() => props.data.verifyId ?? makeVerifyId());
+  const [busy, setBusy] = useState<BusyAction>("preview");
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
+
+  const fullData: ShareData = useMemo(
+    () => ({ ...props.data, layout, verifyId }),
+    [props.data, layout, verifyId],
+  );
+
+  // ESC close + body scroll lock
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") props.onClose(); };
+    document.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [props]);
+
+  // regenerate preview when layout/data change
+  useEffect(() => {
+    let cancelled = false;
+    setBusy("preview");
+    setToast(null);
+    (async () => {
+      try {
+        const blob = await generateImage(fullData);
+        if (cancelled) return;
+        const url = URL.createObjectURL(blob);
+        setPreviewUrl((old) => {
+          if (old) URL.revokeObjectURL(old);
+          return url;
+        });
+        setBusy(null);
+      } catch {
+        if (!cancelled) {
+          setBusy(null);
+          setToast({ kind: "err", text: "Не удалось построить превью" });
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [fullData]);
+
+  // cleanup the last URL on unmount
+  useEffect(() => () => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const flashToast = (t: { kind: "ok" | "err"; text: string }) => {
+    setToast(t);
+    window.setTimeout(() => setToast((cur) => (cur === t ? null : cur)), 2200);
+  };
+
+  async function download(format: ShareFormat) {
+    setBusy(format);
+    try {
+      const result = await exportShare(fullData, format, props.baseName);
+      flashToast({
+        kind: "ok",
+        text: result === "shared"
+          ? "Отправлено"
+          : format === "pdf" ? "PDF загружен" : "Картинка загружена",
+      });
+    } catch (e) {
+      if (!(e instanceof Error && e.name === "AbortError")) {
+        flashToast({ kind: "err", text: "Не удалось сохранить" });
+      }
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function copyToClipboard() {
+    setBusy("copy");
+    try {
+      await copyImageToClipboard(fullData);
+      flashToast({ kind: "ok", text: "Скопировано в буфер" });
+    } catch {
+      flashToast({ kind: "err", text: "Буфер обмена недоступен" });
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function nativeShare() {
+    setBusy("share");
+    try {
+      await download("png");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  const supportsNative = nativeShareSupported();
+  const supportsCopy = typeof ClipboardItem !== "undefined" && !!navigator.clipboard?.write;
+
+  return (
+    <div
+      className="share-modal-backdrop"
+      onClick={(e) => { if (e.target === e.currentTarget) props.onClose(); }}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Поделиться результатом"
+    >
+      <div className="share-modal">
+        <header className="share-modal__head">
+          <div>
+            <div className="share-modal__title">Поделиться результатом</div>
+            <div className="share-modal__sub">ID проверки: {verifyId}</div>
+          </div>
+          <button
+            type="button"
+            className="share-modal__close"
+            onClick={props.onClose}
+            aria-label="Закрыть"
+          >
+            <IconClose />
+          </button>
+        </header>
+
+        <div className="share-modal__toolbar">
+          <div className="share-layout-toggle" role="tablist">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={layout === "card"}
+              className={cx("share-layout-toggle__btn", layout === "card" && "share-layout-toggle__btn--active")}
+              onClick={() => setLayout("card")}
+            >
+              <IconCard />
+              Карточка
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={layout === "story"}
+              className={cx("share-layout-toggle__btn", layout === "story" && "share-layout-toggle__btn--active")}
+              onClick={() => setLayout("story")}
+            >
+              <IconPhone />
+              История 9:16
+            </button>
+          </div>
+        </div>
+
+        <div className={cx("share-modal__preview", `share-modal__preview--${layout}`)}>
+          {previewUrl ? (
+            <img src={previewUrl} alt="Превью" className="share-modal__preview-img" />
+          ) : null}
+          {busy === "preview" && (
+            <div className="share-modal__preview-overlay">
+              <div className="share-modal__spinner" aria-hidden="true" />
+              <span>Готовим превью…</span>
+            </div>
+          )}
+        </div>
+
+        <div className="share-modal__actions">
+          {supportsCopy && (
+            <button
+              type="button"
+              className="share-action share-action--ghost"
+              onClick={copyToClipboard}
+              disabled={busy !== null}
+            >
+              <IconCopy />
+              {busy === "copy" ? "Копирую…" : "Копировать"}
+            </button>
+          )}
+          <button
+            type="button"
+            className="share-action share-action--ghost"
+            onClick={() => download("png")}
+            disabled={busy !== null}
+          >
+            <IconImage />
+            {busy === "png" ? "Сохраняю…" : "PNG"}
+          </button>
+          <button
+            type="button"
+            className="share-action share-action--ghost"
+            onClick={() => download("pdf")}
+            disabled={busy !== null}
+          >
+            <IconPdf />
+            {busy === "pdf" ? "Сохраняю…" : "PDF"}
+          </button>
+          {supportsNative ? (
+            <button
+              type="button"
+              className="share-action share-action--primary"
+              onClick={nativeShare}
+              disabled={busy !== null}
+            >
+              <IconShare />
+              {busy === "share" ? "…" : "Поделиться"}
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="share-action share-action--primary"
+              onClick={() => download("png")}
+              disabled={busy !== null}
+            >
+              <IconDownload />
+              Скачать
+            </button>
+          )}
+        </div>
+
+        {toast && (
+          <div className={cx("share-toast", `share-toast--${toast.kind}`)} role="status">
+            {toast.text}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

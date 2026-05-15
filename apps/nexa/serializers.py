@@ -84,7 +84,7 @@ class HistoryEntrySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = HistoryEntry
-        fields = ['id', 'entry_type', 'input_text', 'audio_file', 'result', 'created_at', 'device_id']
+        fields = ['id', 'entry_type', 'input_text', 'audio_file', 'result', 'created_at', 'device_id', 'device_type']
 
     def get_audio_file(self, obj):
         return None

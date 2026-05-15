@@ -358,6 +358,76 @@ export function IconShare() {
   );
 }
 
+export function IconImage() {
+  return (
+    <I>
+      <svg viewBox="0 0 24 24" fill="none">
+        <rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" strokeWidth="2" />
+        <circle cx="9" cy="10" r="1.6" fill="currentColor" />
+        <path d="M4 18l5-5 4 4 3-3 4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </I>
+  );
+}
+
+export function IconCopy() {
+  return (
+    <I>
+      <svg viewBox="0 0 24 24" fill="none">
+        <rect x="8" y="8" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="2" />
+        <path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      </svg>
+    </I>
+  );
+}
+
+export function IconPhone() {
+  return (
+    <I>
+      <svg viewBox="0 0 24 24" fill="none">
+        <rect x="7" y="2" width="10" height="20" rx="2.5" stroke="currentColor" strokeWidth="2" />
+        <path d="M11 18h2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      </svg>
+    </I>
+  );
+}
+
+export function IconCard() {
+  return (
+    <I>
+      <svg viewBox="0 0 24 24" fill="none">
+        <rect x="3" y="6" width="18" height="12" rx="2" stroke="currentColor" strokeWidth="2" />
+        <path d="M3 10h18" stroke="currentColor" strokeWidth="2" />
+      </svg>
+    </I>
+  );
+}
+
+export function IconDownload() {
+  return (
+    <I>
+      <svg viewBox="0 0 24 24" fill="none">
+        <path d="M12 4v12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        <path d="M7 11l5 5 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M5 20h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      </svg>
+    </I>
+  );
+}
+
+export function IconPdf() {
+  return (
+    <I>
+      <svg viewBox="0 0 24 24" fill="none">
+        <path d="M7 3h7l5 5v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+        <path d="M14 3v5h5" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+        <path d="M8.5 17v-4h1.2a1.2 1.2 0 0 1 0 2.4H8.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M13 13h.8a1.6 1.6 0 0 1 1.6 1.6v.8A1.6 1.6 0 0 1 13.8 17H13v-4Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      </svg>
+    </I>
+  );
+}
+
 export function IconChart() {
   return (
     <I>

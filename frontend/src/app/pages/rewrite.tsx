@@ -1,9 +1,10 @@
 import { useMemo, useState } from "react";
 import { api, type HumanRewriteResponse } from "../../lib/api";
 import { usePageMeta } from "../../lib/meta";
+import type { ShareData } from "../../lib/shareExport";
 import {
   Button, Card, Grid, MessageBox, Pill, ResultSection,
-  Row, TextArea,
+  Row, ShareMenu, TextArea,
 } from "../../ui/components";
 import { IconWand } from "../../ui/icons";
 
@@ -115,23 +116,42 @@ function DiffView({ original, rewritten }: { original: string; rewritten: string
 function RewriteResult({ input, data }: { input: string; data: HumanRewriteResponse }) {
   const [view, setView] = useState<"result" | "diff">("diff");
 
+  const shareData: ShareData = useMemo(() => ({
+    mode: "Истинный смысл сообщения",
+    paletteKey: data.red_flags.length > 0 ? "danger" : "neutral",
+    sections: [
+      ...(input.trim()
+        ? [{ kind: "quote" as const, title: "Оригинал", body: input.trim() }]
+        : []),
+      ...(data.honest_version
+        ? [{ kind: "quote" as const, title: "Честная версия", body: data.honest_version }]
+        : []),
+      ...(data.red_flags.length > 0
+        ? [{ kind: "tags" as const, title: "Красные флаги", tags: data.red_flags }]
+        : []),
+    ],
+  }), [input, data]);
+
   return (
     <div className="result-view">
-      <div className="rewrite-tabs">
-        <button
-          type="button"
-          className={`chip${view === "diff" ? " chip--active" : ""}`}
-          onClick={() => setView("diff")}
-        >
-          Сравнение
-        </button>
-        <button
-          type="button"
-          className={`chip${view === "result" ? " chip--active" : ""}`}
-          onClick={() => setView("result")}
-        >
-          Результат
-        </button>
+      <div className="result-verdict-row">
+        <div className="rewrite-tabs">
+          <button
+            type="button"
+            className={`chip${view === "diff" ? " chip--active" : ""}`}
+            onClick={() => setView("diff")}
+          >
+            Сравнение
+          </button>
+          <button
+            type="button"
+            className={`chip${view === "result" ? " chip--active" : ""}`}
+            onClick={() => setView("result")}
+          >
+            Результат
+          </button>
+        </div>
+        <ShareMenu data={shareData} baseName="vantoryx-rewrite" />
       </div>
 
       {view === "diff" && data.honest_version && (

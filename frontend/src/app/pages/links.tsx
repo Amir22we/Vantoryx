@@ -1,12 +1,12 @@
 import { useMemo, useState } from "react";
 import { api, type LinkAnalysisResponse } from "../../lib/api";
 import { usePageMeta } from "../../lib/meta";
-import { generateShareCard, shareOrDownload } from "../../lib/shareCard";
+import type { ShareData } from "../../lib/shareExport";
 import {
   Button, Card, Grid, Pill, ResultList, ResultSection,
-  ResultText, RiskBar, Row, TextArea,
+  ResultText, RiskBar, Row, ShareMenu, TextArea,
 } from "../../ui/components";
-import { IconLink, IconShare } from "../../ui/icons";
+import { IconLink } from "../../ui/icons";
 
 type Busy<T> = { status: "idle" } | { status: "loading" } | { status: "ok"; data: T } | { status: "error"; error: string };
 const toErr = (e: unknown) => (e instanceof Error ? e.message : String(e));
@@ -26,30 +26,33 @@ const VERDICT_TONE: Record<string, "danger" | "safe" | "warn"> = {
 };
 
 function LinksResult({ data }: { data: LinkAnalysisResponse }) {
-  const [sharing, setSharing] = useState(false);
-  const [shareErr, setShareErr] = useState("");
-
-  async function share() {
-    setSharing(true);
-    setShareErr("");
-    try {
-      const allReasons = data.items.flatMap((item) => item.reasons);
-      const blob = await generateShareCard({
-        verdict: data.verdict,
-        verdictLabel: VERDICT_LABEL[data.verdict] ?? data.verdict,
-        score: data.risk_score,
-        explanation: data.ai_conclusion,
-        reasons: allReasons,
-      });
-      await shareOrDownload(blob);
-    } catch (e) {
-      if (e instanceof Error && e.name !== "AbortError") {
-        setShareErr("Не удалось создать карточку");
-      }
-    } finally {
-      setSharing(false);
-    }
-  }
+  const shareData: ShareData = useMemo(() => {
+    const allReasons = data.items.flatMap((item) => item.reasons);
+    const urlLines = data.items
+      .map((it) => `${it.domain} — ${VERDICT_LABEL[it.verdict] ?? it.verdict}`)
+      .slice(0, 12);
+    return {
+      mode: "Проверка ссылок",
+      paletteKey: data.verdict,
+      sections: [
+        {
+          kind: "verdict",
+          verdict: data.verdict,
+          label: VERDICT_LABEL[data.verdict] ?? data.verdict,
+          score: data.risk_score,
+        },
+        ...(data.ai_conclusion
+          ? [{ kind: "text" as const, title: "Вывод", body: data.ai_conclusion }]
+          : []),
+        ...(urlLines.length > 0
+          ? [{ kind: "list" as const, title: "По каждой ссылке", items: urlLines, variant: "neutral" as const }]
+          : []),
+        ...(allReasons.length > 0
+          ? [{ kind: "list" as const, title: "Что насторожило", items: allReasons, variant: "negative" as const }]
+          : []),
+      ],
+    };
+  }, [data]);
 
   return (
     <div className="result-view">
@@ -60,17 +63,7 @@ function LinksResult({ data }: { data: LinkAnalysisResponse }) {
         {data.extracted_urls.length > 0 && (
           <Pill tone="neutral">Найдено URL: {data.extracted_urls.length}</Pill>
         )}
-        <button
-          type="button"
-          className="share-btn"
-          onClick={share}
-          disabled={sharing}
-          aria-label="Поделиться результатом"
-        >
-          <IconShare />
-          {sharing ? "Генерация…" : "Поделиться"}
-        </button>
-        {shareErr && <Pill tone="danger">{shareErr}</Pill>}
+        <ShareMenu data={shareData} baseName="vantoryx-links" />
       </div>
 
       <RiskBar score={data.risk_score} />

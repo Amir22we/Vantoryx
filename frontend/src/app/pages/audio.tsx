@@ -1,11 +1,12 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { usePageMeta } from "../../lib/meta";
 import { startStreamingRecorder, type AudioSource } from "../../lib/audio";
 import { getDeviceId } from "../../lib/deviceId";
+import type { ShareData } from "../../lib/shareExport";
 import { msToClock } from "../../ui/ui";
 import {
   Button, Card, Grid, Pill, ResultSection, ResultText,
-  Row, Select, Small,
+  Row, Select, ShareMenu, Small,
 } from "../../ui/components";
 import { IconMic } from "../../ui/icons";
 
@@ -148,6 +149,21 @@ export function AudioPage() {
         : "safe"
       : "warn";
 
+  const shareData: ShareData | null = useMemo(() => {
+    if (result.status !== "ok") return null;
+    const paletteKey = result.verdict.includes("мошенники") ? "danger" : "safe";
+    return {
+      mode: "Анализ аудио-звонка",
+      paletteKey,
+      sections: [
+        { kind: "verdict", verdict: paletteKey, label: result.verdict || "Результат" },
+        ...(result.transcript
+          ? [{ kind: "quote" as const, title: "Полная транскрипция", body: result.transcript }]
+          : []),
+      ],
+    };
+  }, [result]);
+
   const info = (
     <>
       <p>Режим записывает разговор через микрофон или системный звук, транскрибирует в реальном времени через Whisper и анализирует ИИ на признаки мошенничества.</p>
@@ -208,6 +224,7 @@ export function AudioPage() {
           <div className="result-view">
             <div className="result-verdict-row">
               <Pill tone={verdictTone}>{result.verdict}</Pill>
+              {shareData && <ShareMenu data={shareData} baseName="vantoryx-audio" />}
             </div>
             {result.transcript && (
               <ResultSection title="Полная транскрипция">

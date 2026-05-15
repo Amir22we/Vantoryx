@@ -33,6 +33,7 @@ class HistoryEntry(models.Model):
 
     entry_type = models.CharField(max_length=20, choices=ENTRY_TYPES)
     device_id = models.CharField(max_length=64, blank=True, default='')
+    device_type = models.CharField(max_length=32, blank=True, default='')
     input_text = models.TextField(blank=True, null=True)
     audio_task = models.ForeignKey(
         AudioTask, null=True, blank=True, on_delete=models.SET_NULL, related_name='history_entries'

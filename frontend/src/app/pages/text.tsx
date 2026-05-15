@@ -1,12 +1,12 @@
 import { useMemo, useState } from "react";
 import { api, type TextScamResponse } from "../../lib/api";
 import { usePageMeta } from "../../lib/meta";
-import { generateShareCard, shareOrDownload } from "../../lib/shareCard";
+import type { ShareData } from "../../lib/shareExport";
 import {
   Button, Card, Grid, Pill, ResultList,
-  ResultSection, ResultText, RiskBar, Row, TextArea,
+  ResultSection, ResultText, RiskBar, Row, ShareMenu, TextArea,
 } from "../../ui/components";
-import { IconShare, IconShield } from "../../ui/icons";
+import { IconShield } from "../../ui/icons";
 
 type Busy<T> = { status: "idle" } | { status: "loading" } | { status: "ok"; data: T } | { status: "error"; error: string };
 const toErr = (e: unknown) => (e instanceof Error ? e.message : String(e));
@@ -130,27 +130,27 @@ function HighlightedText({ text, reasons }: { text: string; reasons: string[] })
 // ── TextResult ────────────────────────────────────────────────
 
 function TextResult({ input, data }: { input: string; data: TextScamResponse }) {
-  const [sharing, setSharing] = useState(false);
-  const [shareErr, setShareErr] = useState("");
-
-  async function share() {
-    setSharing(true);
-    setShareErr("");
-    try {
-      const blob = await generateShareCard({
+  const shareData: ShareData = useMemo(() => ({
+    mode: "Проверка текста",
+    paletteKey: data.verdict,
+    sections: [
+      {
+        kind: "verdict",
         verdict: data.verdict,
-        verdictLabel: VERDICT_LABEL[data.verdict] ?? data.verdict,
+        label: VERDICT_LABEL[data.verdict] ?? data.verdict,
         score: data.risk_score,
-        explanation: data.short_explanation,
-        reasons: data.reasons,
-      });
-      await shareOrDownload(blob);
-    } catch (e) {
-      if (e instanceof Error && e.name !== "AbortError") setShareErr("Не удалось создать карточку");
-    } finally {
-      setSharing(false);
-    }
-  }
+      },
+      ...(data.short_explanation
+        ? [{ kind: "text" as const, title: "Вывод", body: data.short_explanation }]
+        : []),
+      ...(data.reasons.length > 0
+        ? [{ kind: "list" as const, title: "Что насторожило", items: data.reasons, variant: "negative" as const }]
+        : []),
+      ...(input.trim()
+        ? [{ kind: "quote" as const, title: "Проверенный текст", body: input.trim() }]
+        : []),
+    ],
+  }), [input, data]);
 
   return (
     <div className="result-view">
@@ -158,17 +158,7 @@ function TextResult({ input, data }: { input: string; data: TextScamResponse }) 
         <Pill tone={VERDICT_TONE[data.verdict] ?? "warn"}>
           {VERDICT_LABEL[data.verdict] ?? data.verdict}
         </Pill>
-        <button
-          type="button"
-          className="share-btn"
-          onClick={share}
-          disabled={sharing}
-          aria-label="Поделиться результатом"
-        >
-          <IconShare />
-          {sharing ? "Генерация…" : "Поделиться"}
-        </button>
-        {shareErr && <Pill tone="danger">{shareErr}</Pill>}
+        <ShareMenu data={shareData} baseName="vantoryx-text" />
       </div>
 
       <HighlightedText text={input} reasons={data.reasons} />
