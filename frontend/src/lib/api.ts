@@ -49,7 +49,7 @@ export type HistoryEntry = {
   device_type: string;
 };
 
-import { getDeviceId } from "./deviceId";
+import { getDeviceId, getDeviceType } from "./deviceId";
 
 const baseUrl = (import.meta.env.VITE_SERVICE_BASE_URL || "").replace(/\/$/, "");
 
@@ -70,7 +70,7 @@ async function readJsonSafe(resp: Response) {
 async function postJson<T>(path: string, payload: unknown): Promise<T> {
   const resp = await fetch(url(path), {
     method: "POST",
-    headers: { "Content-Type": "application/json", "X-Device-ID": getDeviceId() },
+    headers: { "Content-Type": "application/json", "X-Device-ID": getDeviceId(), "X-Device-Type": getDeviceType() },
     body: JSON.stringify(payload),
   });
   const data = await readJsonSafe(resp);
@@ -79,7 +79,7 @@ async function postJson<T>(path: string, payload: unknown): Promise<T> {
 }
 
 async function getJson<T>(path: string): Promise<T> {
-  const resp = await fetch(url(path), { headers: { "X-Device-ID": getDeviceId() } });
+  const resp = await fetch(url(path), { headers: { "X-Device-ID": getDeviceId(), "X-Device-Type": getDeviceType() } });
   const data = await readJsonSafe(resp);
   if (!resp.ok) throw new Error((data && data.detail) || `HTTP ${resp.status}`);
   return data as T;
@@ -95,7 +95,7 @@ export const api = {
   createAudioTask: async (blob: Blob, filename: string): Promise<{ id: number }> => {
     const form = new FormData();
     form.append("file", blob, filename);
-    const resp = await fetch(url("/api/audio-tasks/"), { method: "POST", headers: { "X-Device-ID": getDeviceId() }, body: form });
+    const resp = await fetch(url("/api/audio-tasks/"), { method: "POST", headers: { "X-Device-ID": getDeviceId(), "X-Device-Type": getDeviceType() }, body: form });
     const data = await readJsonSafe(resp);
     if (!resp.ok) throw new Error((data && data.detail) || `HTTP ${resp.status}`);
     return data as { id: number };
